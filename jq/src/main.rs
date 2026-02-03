@@ -127,9 +127,9 @@ mod test {
         let result = run(input).unwrap();
         assert_eq!(result.len(), 3);
         assert_eq!(result.first().unwrap().kind, JSONToken::LBrace);
-        assert_eq!(result.first().unwrap().span, Span { start: 0, end: 0 });
+        assert_eq!(result.first().unwrap().span, Span { start: 0, end: 1 });
         assert_eq!(result[1].kind, JSONToken::RBrace);
-        assert_eq!(result[1].span, Span { start: 1, end: 1 });
+        assert_eq!(result[1].span, Span { start: 1, end: 2 });
         assert_eq!(result.last().unwrap().kind, JSONToken::Eof);
         assert_eq!(result.last().unwrap().span, Span { start: 2, end: 2 });
     }
@@ -141,9 +141,9 @@ mod test {
         let result = run(input).unwrap();
         assert_eq!(result.len(), 3);
         assert_eq!(result.first().unwrap().kind, JSONToken::LBracket);
-        assert_eq!(result.first().unwrap().span, Span { start: 1, end: 1 });
+        assert_eq!(result.first().unwrap().span, Span { start: 1, end: 2 });
         assert_eq!(result[1].kind, JSONToken::RBracket);
-        assert_eq!(result[1].span, Span { start: 3, end: 3 });
+        assert_eq!(result[1].span, Span { start: 3, end: 4 });
         assert_eq!(result.last().unwrap().kind, JSONToken::Eof);
         assert_eq!(result.last().unwrap().span, Span { start: 5, end: 5 });
     }

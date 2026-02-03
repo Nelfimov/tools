@@ -39,42 +39,42 @@ impl<'a> Lexer<'a> {
                     kind: JSONToken::LBrace,
                     span: Span {
                         start: self.pos,
-                        end: self.pos,
+                        end: self.pos + 1,
                     },
                 },
                 b'}' => Token {
                     kind: JSONToken::RBrace,
                     span: Span {
                         start: self.pos,
-                        end: self.pos,
+                        end: self.pos + 1,
                     },
                 },
                 b'[' => Token {
                     kind: JSONToken::LBracket,
                     span: Span {
                         start: self.pos,
-                        end: self.pos,
+                        end: self.pos + 1,
                     },
                 },
                 b']' => Token {
                     kind: JSONToken::RBracket,
                     span: Span {
                         start: self.pos,
-                        end: self.pos,
+                        end: self.pos + 1,
                     },
                 },
                 b':' => Token {
                     kind: JSONToken::Colon,
                     span: Span {
                         start: self.pos,
-                        end: self.pos,
+                        end: self.pos + 1,
                     },
                 },
                 b',' => Token {
                     kind: JSONToken::Comma,
                     span: Span {
                         start: self.pos,
-                        end: self.pos,
+                        end: self.pos + 1,
                     },
                 },
                 d => {
