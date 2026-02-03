@@ -1,4 +1,9 @@
+use std::error::Error;
 use std::io::BufRead;
+
+use crate::lexer::Lexer;
+
+pub mod lexer;
 
 fn main() {
     let stdin = std::io::stdin();
@@ -44,7 +49,7 @@ pub struct ErrorInfo {
 
 #[derive(Debug)]
 pub enum Found {
-    Byte(u8),
+    Byte(String),
     Eof,
 }
 
@@ -56,6 +61,14 @@ pub enum JSONError {
     InvalidUnicodeEscape(ErrorInfo),
     InvalidNumber(ErrorInfo),
 }
+
+impl std::fmt::Display for JSONError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "")
+    }
+}
+
+impl Error for JSONError {}
 
 fn run(input: &str) -> Result<Vec<Token>, JSONError> {
     let mut result: Vec<Token> = Vec::new();
@@ -75,86 +88,6 @@ fn run(input: &str) -> Result<Vec<Token>, JSONError> {
     }
 
     Ok(result)
-}
-
-pub struct Lexer<'a> {
-    input: &'a [u8],
-    pos: usize,
-}
-
-impl<'a> Lexer<'a> {
-    pub fn new(input: &'a [u8]) -> Self {
-        Self { pos: 0, input }
-    }
-
-    pub fn next_token(&mut self) -> Result<Token, JSONError> {
-        if self.input.is_empty() {
-            Ok(Token {
-                kind: JSONToken::Eof,
-                span: Span { start: 0, end: 0 },
-            })
-        } else {
-            self.skip_ws();
-            if self.pos >= self.input.len() {
-                return Ok(Token {
-                    kind: JSONToken::Eof,
-                    span: Span {
-                        start: self.pos,
-                        end: self.pos,
-                    },
-                });
-            }
-            let token = match self.input[self.pos] {
-                123 => Token {
-                    kind: JSONToken::LBrace,
-                    span: Span {
-                        start: self.pos,
-                        end: self.pos,
-                    },
-                },
-                125 => Token {
-                    kind: JSONToken::RBrace,
-                    span: Span {
-                        start: self.pos,
-                        end: self.pos,
-                    },
-                },
-                91 => Token {
-                    kind: JSONToken::LBracket,
-                    span: Span {
-                        start: self.pos,
-                        end: self.pos,
-                    },
-                },
-                93 => Token {
-                    kind: JSONToken::RBracket,
-                    span: Span {
-                        start: self.pos,
-                        end: self.pos,
-                    },
-                },
-                d => {
-                    println!("Token: {d}");
-                    return Err(JSONError::UnexpectedByte(ErrorInfo {
-                        offset: self.pos,
-                        found: Found::Byte(d),
-                    }));
-                }
-            };
-            self.pos += 1;
-            Ok(token)
-        }
-    }
-
-    fn skip_ws(&mut self) {
-        while self.pos < self.input.len() {
-            let v = self.input[self.pos];
-            if v != 32 {
-                break;
-            }
-            self.pos += 1;
-        }
-    }
 }
 
 #[cfg(test)]
