@@ -1,0 +1,15 @@
+[workspace]
+resolver = "3"
+members = ["jq"]
+
+[workspace.dependencies]
+tracing = { version = "0.1" }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+envy = { version = "0.4" }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1.0" }
+validator = { version = "0.20", features = ["derive"] }
+mimalloc = { version = "0.1.48" }
+
+[profile.release]
+strip = true
