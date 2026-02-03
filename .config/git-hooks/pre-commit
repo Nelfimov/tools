@@ -1,0 +1,18 @@
+RUST_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.rs$' || true)
+
+if [ -n "$RUST_FILES" ]; then
+  echo "Running clippy on staged Rust files..."
+  cargo clippy --fix -- -D warnings --allow-dirty
+  git add $RUST_FILES
+
+  if ! cargo clippy -- -D warnings; then
+    echo "Clippy found offenses. Please fix them before committing."
+    exit 1
+  fi
+
+  if ! cargo test; then
+    echo "Tests failed offenses"
+    exit 1
+  fi
+fi
+

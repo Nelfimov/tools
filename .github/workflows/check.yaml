@@ -1,0 +1,14 @@
+name: Check
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+jobs:
+  check:
+    name: Check
+    uses: nelfimov/workflows/.github/workflows/check-rust.yaml@main
+    permissions:
+      contents: read
