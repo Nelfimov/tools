@@ -1,4 +1,4 @@
-HOOKS_DIR := .config/.git-hooks
+HOOKS_DIR := .config/git-hooks
 
 .PHONY: build test lint
 
