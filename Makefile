@@ -11,7 +11,7 @@ build: test
 	cargo build
 
 test:
-	cargo test
+	cargo test -- --nocapture
 
 lint:
 	cargo clippy -- -D warnings
