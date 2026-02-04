@@ -155,4 +155,52 @@ mod test {
         let input = "@";
         let _ = run(input).unwrap();
     }
+
+    /// `true`
+    #[test]
+    fn true_input() {
+        let input = "true";
+        let result = run(input).unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result.first().unwrap().kind, JSONToken::True);
+        assert_eq!(result.first().unwrap().span, Span { start: 0, end: 4 });
+    }
+
+    /// `true`
+    #[test]
+    fn false_input() {
+        let input = "false";
+        let result = run(input).unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result.first().unwrap().kind, JSONToken::False);
+        assert_eq!(result.first().unwrap().span, Span { start: 0, end: 5 });
+    }
+
+    /// `null`
+    #[test]
+    fn null_input() {
+        let input = "null";
+        let result = run(input).unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result.first().unwrap().kind, JSONToken::Null);
+        assert_eq!(result.first().unwrap().span, Span { start: 0, end: 4 });
+    }
+
+    /// `tRue`
+    #[test]
+    #[should_panic = "UnexpectedByte"]
+    fn invalid_true_input() {
+        let input = "tRue";
+        let _ = run(input).unwrap();
+    }
+
+    /// ` true `
+    #[test]
+    fn true_ws_input() {
+        let input = " true ";
+        let result = run(input).unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result.first().unwrap().kind, JSONToken::True);
+        assert_eq!(result.first().unwrap().span, Span { start: 1, end: 5 });
+    }
 }

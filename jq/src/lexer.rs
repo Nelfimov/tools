@@ -77,6 +77,15 @@ impl<'a> Lexer<'a> {
                         end: self.pos + 1,
                     },
                 },
+                b't' => self
+                    .lex_exact("true".to_string().as_bytes(), JSONToken::True)
+                    .unwrap(),
+                b'f' => self
+                    .lex_exact("false".to_string().as_bytes(), JSONToken::False)
+                    .unwrap(),
+                b'n' => self
+                    .lex_exact("null".to_string().as_bytes(), JSONToken::Null)
+                    .unwrap(),
                 d => {
                     return Err(JSONError::UnexpectedByte(ErrorInfo {
                         offset: self.pos,
@@ -96,6 +105,33 @@ impl<'a> Lexer<'a> {
                 break;
             }
             self.pos += 1;
+        }
+    }
+
+    fn lex_exact(&mut self, byte_seq: &[u8], expected: JSONToken) -> Result<Token, JSONError> {
+        let mut span = Span {
+            start: self.pos,
+            end: self.pos,
+        };
+        let mut inner_idx = byte_seq.first().unwrap();
+        let equals = byte_seq.iter().all(|v| {
+            let result = *v == self.input[self.pos];
+            self.pos += 1;
+            inner_idx = v;
+            result
+        });
+
+        if equals {
+            span.end = self.pos;
+            Ok(Token {
+                kind: expected,
+                span,
+            })
+        } else {
+            Err(JSONError::UnexpectedByte(ErrorInfo {
+                offset: span.start,
+                found: Found::Byte(str::from_utf8(&[*inner_idx]).unwrap().to_string()),
+            }))
         }
     }
 }
