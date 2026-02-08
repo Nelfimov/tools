@@ -19,7 +19,7 @@ pub struct Span {
     end: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Token {
     pub kind: JSONToken,
     pub span: Span,
@@ -91,116 +91,305 @@ fn run(input: &str) -> Result<Vec<Token>, JSONError> {
 }
 
 #[cfg(test)]
-mod test {
-    use crate::JSONToken;
-    use crate::Span;
-    use crate::run;
+mod main {
+    mod primitives {
+        use crate::*;
 
-    /// Eof
-    ///
-    /// один токен Eof со span start=end=0
-    #[test]
-    fn no_input() {
-        let input = "";
-        let result = run(input).unwrap();
-        assert_eq!(result.len(), 1);
-        assert_eq!(result.first().unwrap().kind, JSONToken::Eof);
-        assert_eq!(result.first().unwrap().span, Span { start: 0, end: 0 });
+        /// Eof
+        ///
+        /// один токен Eof со span start=end=0
+        #[test]
+        fn no_input() {
+            let input = "";
+            let result = run(input).unwrap();
+            assert_eq!(result.len(), 1);
+            assert_eq!(
+                result.first().unwrap(),
+                &Token {
+                    kind: JSONToken::Eof,
+                    span: Span { start: 0, end: 0 }
+                }
+            );
+        }
+
+        /// WS/Tab/CR/LF
+        ///
+        /// Eof со span в конце строки
+        #[test]
+        fn only_ws() {
+            let input = "     ";
+            let result = run(input).unwrap();
+            assert_eq!(result.len(), 1);
+            assert_eq!(
+                result.first().unwrap(),
+                &Token {
+                    kind: JSONToken::Eof,
+                    span: Span { start: 5, end: 5 }
+                }
+            );
+        }
+
+        /// `{}`
+        #[test]
+        fn only_braces() {
+            let input = "{}";
+            let result = run(input).unwrap();
+            assert_eq!(result.len(), 3);
+            assert_eq!(
+                result.first().unwrap(),
+                &Token {
+                    kind: JSONToken::LBrace,
+                    span: Span { start: 0, end: 1 }
+                }
+            );
+            assert_eq!(
+                result.get(1).unwrap(),
+                &Token {
+                    kind: JSONToken::RBrace,
+                    span: Span { start: 1, end: 2 }
+                }
+            );
+        }
+
+        /// ` [ ] `
+        #[test]
+        fn brackets_with_ws() {
+            let input = " [ ] ";
+            let result = run(input).unwrap();
+            assert_eq!(result.len(), 3);
+            assert_eq!(
+                result.first().unwrap(),
+                &Token {
+                    kind: JSONToken::LBracket,
+                    span: Span { start: 1, end: 2 }
+                }
+            );
+            assert_eq!(
+                result.get(1).unwrap(),
+                &Token {
+                    kind: JSONToken::RBracket,
+                    span: Span { start: 3, end: 4 }
+                }
+            );
+        }
+
+        /// `@`
+        #[test]
+        #[should_panic]
+        fn unexpected_byte() {
+            let input = "@";
+            let _ = run(input).unwrap();
+        }
     }
 
-    /// WS/Tab/CR/LF
-    ///
-    /// Eof со span в конце строки
-    #[test]
-    fn only_ws() {
-        let input = "     ";
-        let result = run(input).unwrap();
-        assert_eq!(result.len(), 1);
-        assert_eq!(result.first().unwrap().kind, JSONToken::Eof);
-        assert_eq!(result.first().unwrap().span, Span { start: 5, end: 5 });
+    mod true_false_null {
+        use crate::*;
+
+        /// `true`
+        #[test]
+        fn true_input() {
+            let input = "true";
+            let result = run(input).unwrap();
+            assert_eq!(result.len(), 2);
+            assert_eq!(
+                result.first().unwrap(),
+                &Token {
+                    kind: JSONToken::True,
+                    span: Span { start: 0, end: 4 }
+                }
+            );
+        }
+
+        /// `false`
+        #[test]
+        fn false_input() {
+            let input = "false";
+            let result = run(input).unwrap();
+            assert_eq!(result.len(), 2);
+            assert_eq!(
+                result.first().unwrap(),
+                &Token {
+                    kind: JSONToken::False,
+                    span: Span { start: 0, end: 5 }
+                }
+            );
+        }
+
+        /// `null`
+        #[test]
+        fn null_input() {
+            let input = "null";
+            let result = run(input).unwrap();
+            assert_eq!(result.len(), 2);
+            assert_eq!(
+                result.first().unwrap(),
+                &Token {
+                    kind: JSONToken::Null,
+                    span: Span { start: 0, end: 4 }
+                }
+            );
+        }
+
+        /// `tRue`
+        #[test]
+        #[should_panic = "UnexpectedByte"]
+        fn invalid_true_input() {
+            let input = "tRue";
+            let _ = run(input).unwrap();
+        }
+
+        /// ` true `
+        #[test]
+        fn true_ws_input() {
+            let input = " true ";
+            let result = run(input).unwrap();
+            assert_eq!(result.len(), 2);
+            assert_eq!(
+                result.first().unwrap(),
+                &Token {
+                    kind: JSONToken::True,
+                    span: Span { start: 1, end: 5 }
+                }
+            );
+        }
     }
 
-    /// `{}`
-    #[test]
-    fn only_braces() {
-        let input = "{}";
-        let result = run(input).unwrap();
-        assert_eq!(result.len(), 3);
-        assert_eq!(result.first().unwrap().kind, JSONToken::LBrace);
-        assert_eq!(result.first().unwrap().span, Span { start: 0, end: 1 });
-        assert_eq!(result[1].kind, JSONToken::RBrace);
-        assert_eq!(result[1].span, Span { start: 1, end: 2 });
-        assert_eq!(result.last().unwrap().kind, JSONToken::Eof);
-        assert_eq!(result.last().unwrap().span, Span { start: 2, end: 2 });
-    }
+    mod numbers {
+        use crate::*;
 
-    /// ` [ ] `
-    #[test]
-    fn brackets_with_ws() {
-        let input = " [ ] ";
-        let result = run(input).unwrap();
-        assert_eq!(result.len(), 3);
-        assert_eq!(result.first().unwrap().kind, JSONToken::LBracket);
-        assert_eq!(result.first().unwrap().span, Span { start: 1, end: 2 });
-        assert_eq!(result[1].kind, JSONToken::RBracket);
-        assert_eq!(result[1].span, Span { start: 3, end: 4 });
-        assert_eq!(result.last().unwrap().kind, JSONToken::Eof);
-        assert_eq!(result.last().unwrap().span, Span { start: 5, end: 5 });
-    }
+        /// `0`
+        #[test]
+        fn number_zero_input() {
+            let input = "0";
+            let result = run(input).unwrap();
+            assert_eq!(result.len(), 2);
+            assert_eq!(
+                result.first().unwrap(),
+                &Token {
+                    kind: JSONToken::Number(input.to_string()),
+                    span: Span { start: 0, end: 2 }
+                }
+            );
+        }
 
-    /// `@`
-    #[test]
-    #[should_panic]
-    fn unexpected_byte() {
-        let input = "@";
-        let _ = run(input).unwrap();
-    }
+        /// `-0`
+        #[test]
+        fn number_minus_zero_input() {
+            let input = "-0";
+            let result = run(input).unwrap();
+            assert_eq!(result.len(), 2);
+            assert_eq!(
+                result.first().unwrap(),
+                &Token {
+                    kind: JSONToken::Number(input.to_string()),
+                    span: Span { start: 0, end: 2 }
+                }
+            );
+        }
 
-    /// `true`
-    #[test]
-    fn true_input() {
-        let input = "true";
-        let result = run(input).unwrap();
-        assert_eq!(result.len(), 2);
-        assert_eq!(result.first().unwrap().kind, JSONToken::True);
-        assert_eq!(result.first().unwrap().span, Span { start: 0, end: 4 });
-    }
+        /// `10`
+        #[test]
+        fn number_ten_input() {
+            let input = "10";
+            let result = run(input).unwrap();
+            assert_eq!(result.len(), 2);
+            assert_eq!(
+                result.first().unwrap(),
+                &Token {
+                    kind: JSONToken::Number(input.to_string()),
+                    span: Span { start: 0, end: 2 }
+                }
+            );
+        }
 
-    /// `true`
-    #[test]
-    fn false_input() {
-        let input = "false";
-        let result = run(input).unwrap();
-        assert_eq!(result.len(), 2);
-        assert_eq!(result.first().unwrap().kind, JSONToken::False);
-        assert_eq!(result.first().unwrap().span, Span { start: 0, end: 5 });
-    }
+        /// `10.5`
+        #[test]
+        fn number_and_half_ten_input() {
+            let input = "10.5";
+            let result = run(input).unwrap();
+            assert_eq!(result.len(), 2);
+            assert_eq!(
+                result.first().unwrap(),
+                &Token {
+                    kind: JSONToken::Number(input.to_string()),
+                    span: Span { start: 0, end: 4 }
+                }
+            );
+        }
 
-    /// `null`
-    #[test]
-    fn null_input() {
-        let input = "null";
-        let result = run(input).unwrap();
-        assert_eq!(result.len(), 2);
-        assert_eq!(result.first().unwrap().kind, JSONToken::Null);
-        assert_eq!(result.first().unwrap().span, Span { start: 0, end: 4 });
-    }
+        /// `0.5`
+        #[test]
+        fn number_half_input() {
+            let input = "0.5";
+            let result = run(input).unwrap();
+            assert_eq!(result.len(), 2);
+            assert_eq!(
+                result.first().unwrap(),
+                &Token {
+                    kind: JSONToken::Number(input.to_string()),
+                    span: Span { start: 0, end: 3 }
+                }
+            );
+        }
 
-    /// `tRue`
-    #[test]
-    #[should_panic = "UnexpectedByte"]
-    fn invalid_true_input() {
-        let input = "tRue";
-        let _ = run(input).unwrap();
-    }
+        /// `1e10`
+        #[test]
+        fn number_one_expo_input() {
+            let input = "1e10";
+            let result = run(input).unwrap();
+            assert_eq!(result.len(), 2);
+            assert_eq!(
+                result.first().unwrap(),
+                &Token {
+                    kind: JSONToken::Number(input.to_string()),
+                    span: Span { start: 0, end: 4 }
+                }
+            );
+        }
 
-    /// ` true `
-    #[test]
-    fn true_ws_input() {
-        let input = " true ";
-        let result = run(input).unwrap();
-        assert_eq!(result.len(), 2);
-        assert_eq!(result.first().unwrap().kind, JSONToken::True);
-        assert_eq!(result.first().unwrap().span, Span { start: 1, end: 5 });
+        /// `1E-10`
+        #[test]
+        fn number_one_minus_expo_input() {
+            let input = "1E-10";
+            let result = run(input).unwrap();
+            assert_eq!(result.len(), 2);
+            assert_eq!(
+                result.first().unwrap(),
+                &Token {
+                    kind: JSONToken::Number(input.to_string()),
+                    span: Span { start: 0, end: 5 }
+                }
+            );
+        }
+
+        /// `1e+10`
+        #[test]
+        fn number_one_plus_expo_input() {
+            let input = "1e+10";
+            let result = run(input).unwrap();
+            assert_eq!(result.len(), 2);
+            assert_eq!(
+                result.first().unwrap(),
+                &Token {
+                    kind: JSONToken::Number(input.to_string()),
+                    span: Span { start: 0, end: 5 }
+                }
+            );
+        }
+
+        /// `-12.34e56`
+        #[test]
+        fn number_twelve_input() {
+            let input = "-12.34e56";
+            let result = run(input).unwrap();
+            assert_eq!(result.len(), 2);
+            assert_eq!(
+                result.first().unwrap(),
+                &Token {
+                    kind: JSONToken::Number(input.to_string()),
+                    span: Span { start: 0, end: 9 }
+                }
+            );
+        }
     }
 }

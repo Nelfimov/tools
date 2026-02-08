@@ -7,6 +7,10 @@ use crate::JSONToken;
 use crate::Span;
 use crate::Token;
 
+static TRUE_BYTES: &[u8] = "true".as_bytes();
+static FALSE_BYTES: &[u8] = "false".as_bytes();
+static NULL_BYTES: &[u8] = "null".as_bytes();
+
 pub struct Lexer<'a> {
     input: &'a [u8],
     pos: usize,
@@ -77,15 +81,10 @@ impl<'a> Lexer<'a> {
                         end: self.pos + 1,
                     },
                 },
-                b't' => self
-                    .lex_exact("true".to_string().as_bytes(), JSONToken::True)
-                    .unwrap(),
-                b'f' => self
-                    .lex_exact("false".to_string().as_bytes(), JSONToken::False)
-                    .unwrap(),
-                b'n' => self
-                    .lex_exact("null".to_string().as_bytes(), JSONToken::Null)
-                    .unwrap(),
+                b't' => self.lex_exact(TRUE_BYTES, JSONToken::True).unwrap(),
+                b'f' => self.lex_exact(FALSE_BYTES, JSONToken::False).unwrap(),
+                b'n' => self.lex_exact(NULL_BYTES, JSONToken::Null).unwrap(),
+                b'-' | b'0'..=b'9' => self.lex_number().unwrap(),
                 d => {
                     return Err(JSONError::UnexpectedByte(ErrorInfo {
                         offset: self.pos,
@@ -133,5 +132,81 @@ impl<'a> Lexer<'a> {
                 found: Found::Byte(str::from_utf8(&[*inner_idx]).unwrap().to_string()),
             }))
         }
+    }
+
+    fn lex_number(&mut self) -> Result<Token, JSONError> {
+        let start = self.pos;
+        let end;
+        let mut is_float = false;
+
+        let mut result = vec![self.input[self.pos]];
+
+        match result.first().unwrap() {
+            &b'0' => {
+                self.pos += 1;
+                if self.input.len() > self.pos {
+                    if self.input[self.pos] != b'.' {
+                        return Err(JSONError::InvalidNumber(ErrorInfo {
+                            offset: start,
+                            found: Found::Byte("0".to_string()),
+                        }));
+                    } else {
+                        is_float = true;
+                        result.push(self.input[self.pos]);
+                    }
+                }
+            }
+            &b'-' | b'1'..=b'9' => (),
+            _ => {
+                return Err(JSONError::UnexpectedByte(ErrorInfo {
+                    offset: self.pos,
+                    found: Found::Byte(result.first().unwrap().to_string()),
+                }));
+            }
+        }
+
+        loop {
+            self.pos += 1;
+            if self.input.len() <= self.pos {
+                end = self.pos;
+                break;
+            }
+
+            let current = self.input[self.pos];
+
+            match current {
+                b',' => {
+                    end = self.pos;
+                    break;
+                }
+                b'0'..=b'9' | b'e' | b'E' | b'-' | b'+' => result.push(current),
+                b'.' => {
+                    if is_float {
+                        return Err(JSONError::UnexpectedByte(ErrorInfo {
+                            offset: self.pos,
+                            found: Found::Byte(current.to_string()),
+                        }));
+                    } else {
+                        result.push(current);
+                    }
+                }
+                _ => {
+                    return Err(JSONError::UnexpectedByte(ErrorInfo {
+                        offset: self.pos,
+                        found: Found::Byte(current.to_string()),
+                    }));
+                }
+            }
+        }
+
+        Ok(Token {
+            kind: JSONToken::Number(
+                result
+                    .iter()
+                    .map(|f| str::from_utf8(&[*f]).unwrap().to_string())
+                    .collect(),
+            ),
+            span: Span { start, end },
+        })
     }
 }
