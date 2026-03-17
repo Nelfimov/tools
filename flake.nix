@@ -49,22 +49,13 @@
         cargo = readCargoToml ./entrypoint/Cargo.toml;
       in
       {
-        devShell = pkgs.mkShell {
+        devShells.default = pkgs.mkShell {
           buildInputs = [
             rustToolchain
           ];
-
-          shellHook = ''
-            unset DEVELOPER_DIR;
-            if test -f ".env"; then
-              set -a
-              source .env
-              set +a
-            fi
-          '';
         };
 
-        defaultPackage = naerskLib.buildPackage {
+        packages.default = naerskLib.buildPackage {
           inherit (cargo) name;
           inherit (cargo) version;
           pname = cargo.name;
